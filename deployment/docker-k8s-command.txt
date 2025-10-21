@@ -1,0 +1,42 @@
+dotnet build
+dotnet run
+
+# Step 1: Login to Docker registry
+docker login docker-hosted.sebaoffice.ir
+
+# Step 2: Build the Docker image
+docker build -t docker-hosted.sebaoffice.ir/kss-mcp-template:latest .
+
+# Alternative: Build and push in one command (if using buildx)
+docker buildx build --push -t docker-hosted.sebaoffice.ir/kss-mcp-template:latest .
+
+# Step 3: Push the image to registry
+docker push docker-hosted.sebaoffice.ir/kss-mcp-template:latest
+
+# Step 4:
+kubectl rollout restart deployment/kss-client-web -n kss-client-web
+
+# Remember: Deploying to groups is a PRO-licensed feature. See https://links.sonatype.com/product-nexus-repository
+
+kubectl get pods -n kss-client-web 
+kubectl get secrets -n kss-client-web 
+kubectl get pvc -n kss-client-web 
+kubectl get configmaps -n kss-client-web 
+kubectl get ingress -n kss-client-web 
+kubectl get jobs -n kss-client-web 
+kubectl get cronjobs -n kss-client-web 
+kubectl get svc -n kss-client-web 
+kubectl get certificate -n kss-client-web 
+kubectl get sts -n kss-client-web 
+kubectl get networkpolicy -n kss-client-web 
+
+kubectl create secret docker-registry docker-secret \
+  --docker-server=docker-hosted.sebaoffice.ir \
+  --docker-username=0082280665 \
+  --docker-password=ABcd@12345 \
+  --namespace kss-client-web
+
+kubectl apply -f k8s-production.yaml -n kss-client-web
+
+kubectl delete networkpolicy kss-client-web-network-policy -n kss-client-web
+kubectl delete secrets docker-secret -n kss-client-web

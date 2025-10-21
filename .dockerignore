@@ -1,0 +1,57 @@
+# Directories
+bin/
+obj/
+out/
+.vs/
+.vscode/
+
+# Files
+*.user
+*.suo
+*.sln.docstates
+*.userprefs
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio cache/options
+.vs/
+.vscode/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+.dockerignore
+
+# Documentation
+*.md
+README*
+LICENSE
+
+# Tests
+[Tt]est*/
+*.Test/
+*.Tests/
+
+# NuGet
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+# Others
+*.log
+*.cache
+*.swp
+*~
+.DS_Store
+
