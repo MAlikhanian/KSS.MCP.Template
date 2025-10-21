@@ -2,26 +2,33 @@
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure to listen on port 5000
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.ListenAnyIP(5000);
 });
 
-// Add MCP Server with HTTP/SSE transport
 builder.Services.AddMcpServer()
     .WithHttpTransport()
     .WithToolsFromAssembly();
 
-// Configure HttpClient for National Weather Service API
-builder.Services.AddSingleton(_ =>
+builder.Services.AddHttpClient("weather", client =>
 {
-    var client = new HttpClient() { BaseAddress = new Uri("https://api.weather.gov") };
+    client.BaseAddress = new Uri("https://api.weather.gov");
     client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("weather-tool", "1.0"));
-    return client;
+    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/geo+json"));
 });
 
-// Add CORS for development
+builder.Services.AddHttpClient("coingecko", client =>
+{
+    client.BaseAddress = new Uri("https://api.coingecko.com");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("kss-mcp-coinprice/1.0");
+    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+});
+
+builder.Services.AddTransient<HttpClient>(sp =>
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient("weather"));
+
+builder.Services.AddMemoryCache();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -35,14 +42,20 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseCors();
-
-// Map MCP endpoints (automatically creates /sse endpoint)
 app.MapMcp();
 
-// Console logging works now since we're using HTTP/SSE!
 Console.WriteLine("===============================================");
-Console.WriteLine("Weather MCP Server running on http://localhost:5000");
+Console.WriteLine("Kiwi Smart Solution MCP Service");
+Console.WriteLine("===============================================");
+Console.WriteLine("MCP Server running on http://localhost:5000");
 Console.WriteLine("SSE endpoint: http://localhost:5000/sse");
+Console.WriteLine("-----------------------------------------------");
+Console.WriteLine("Registered HttpClients:");
+Console.WriteLine(" - weather");
+Console.WriteLine(" - coingecko");
+//Console.WriteLine(" - github");
+//Console.WriteLine(" - openweather");
+//Console.WriteLine(" - internal-api");
 Console.WriteLine("===============================================");
 Console.WriteLine("Press Ctrl+C to stop the server");
 

@@ -64,4 +64,48 @@ public static class WeatherTools
             Forecast: {period.GetProperty("detailedForecast").GetString()}
             """));
     }
+
+    [McpServerTool, Description("Get the current spot price of a cryptocurrency from CoinGecko.")]
+    public static async Task<string> GetCoinPrice(
+    IHttpClientFactory httpFactory,
+    [Description("Coin id or ticker (e.g., 'bitcoin' or 'BTC')")] string coin = "BTC",
+    [Description("Fiat currency (e.g., 'usd', 'eur')")] string vsCurrency = "usd")
+    {
+        if (string.IsNullOrWhiteSpace(coin))
+            coin = "BTC";
+        if (string.IsNullOrWhiteSpace(vsCurrency))
+            vsCurrency = "usd";
+
+        var cgId = _tickerToId.TryGetValue(coin, out var mapped) ? mapped : coin.Trim().ToLowerInvariant();
+        var vs = vsCurrency.Trim().ToLowerInvariant();
+
+        var client = httpFactory.CreateClient("coingecko");
+        var uri = $"/api/v3/simple/price?ids={Uri.EscapeDataString(cgId)}&vs_currencies={Uri.EscapeDataString(vs)}";
+
+        using var doc = await client.ReadJsonDocumentAsync(uri);
+        var root = doc.RootElement;
+
+        if (!root.TryGetProperty(cgId, out var coinObj) ||
+            !coinObj.TryGetProperty(vs, out var priceEl))
+        {
+            return $"No price available for '{coin}' in '{vsCurrency}'. Try a CoinGecko id like 'bitcoin' or a ticker like 'BTC'.";
+        }
+
+        var price = priceEl.GetDouble();
+        var displayCoin = _tickerToId.ContainsKey(coin) ? coin.ToUpperInvariant() : cgId;
+
+        return $"{displayCoin} price: {price} {vs.ToUpperInvariant()}";
+    }
+
+    private static readonly Dictionary<string, string> _tickerToId = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["BTC"] = "bitcoin",
+        ["ETH"] = "ethereum",
+        ["BNB"] = "binancecoin",
+        ["ADA"] = "cardano",
+        ["XRP"] = "ripple",
+        ["SOL"] = "solana",
+        ["DOGE"] = "dogecoin",
+        ["TRX"] = "tron"
+    };
 }
