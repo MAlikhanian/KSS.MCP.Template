@@ -26,7 +26,6 @@ spec:
       - name: docker-secret
       containers:
       - name: kss-mcp-template
-        # Use versioned tag instead of latest for better stability
         image: docker-hosted.sebaoffice.ir/kss-mcp-template:latest
         imagePullPolicy: Always
         ports:
@@ -40,24 +39,10 @@ spec:
           value: "http://+:5000"
         - name: TZ
           value: "UTC"
-        # Logging Configuration
         - name: Logging__LogLevel__Default
           value: "Information"
         - name: Logging__LogLevel__Microsoft.AspNetCore
           value: "Warning"
-        # Add any additional environment variables for external API keys if needed
-        # - name: WEATHER_API_KEY
-        #   valueFrom:
-        #     secretKeyRef:
-        #       name: kss-mcp-template-secrets
-        #       key: weather-api-key
-        #       optional: true
-        # - name: COINGECKO_API_KEY
-        #   valueFrom:
-        #     secretKeyRef:
-        #       name: kss-mcp-template-secrets
-        #       key: coingecko-api-key
-        #       optional: true
         resources:
           requests:
             memory: "256Mi"
@@ -67,7 +52,7 @@ spec:
             cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /sse
+            path: /health
             port: 5000
             scheme: HTTP
           initialDelaySeconds: 30
@@ -76,7 +61,7 @@ spec:
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /sse
+            path: /health
             port: 5000
             scheme: HTTP
           initialDelaySeconds: 10
@@ -119,10 +104,6 @@ metadata:
   namespace: kss-mcp
 type: Opaque
 data:
-  # Add base64 encoded API keys here if needed
-  # Example: echo -n "your-api-key" | base64
-  # weather-api-key: ""
-  # coingecko-api-key: ""
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -132,11 +113,11 @@ metadata:
   annotations:
     haproxy.org/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    # Let cert-manager handle ACME challenges automatically
     acme.cert-manager.io/http01-edit-in-place: "true"
     haproxy.org/proxy-body-size: "10m"
-    haproxy.org/proxy-read-timeout: "60"
-    haproxy.org/proxy-send-timeout: "60"
+    haproxy.org/proxy-read-timeout: "3600"
+    haproxy.org/proxy-send-timeout: "3600"
+    haproxy.org/timeout-tunnel: "3600s"
     haproxy.org/rate-limit: "200"
     haproxy.org/rate-limit-window: "1m"
     haproxy.org/proxy-buffer-size: "8k"
