@@ -1,18 +1,10 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kss-client-web
-  labels:
-    name: kss-client-web
-    app: kss-client-web
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kss-client-web
-  namespace: kss-client-web
+  name: kss-mcp-template
+  namespace: kss-mcp
   labels:
-    app: kss-client-web
+    app: kss-mcp-template
     version: v1.0.0
 spec:
   replicas: 3
@@ -23,344 +15,146 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: kss-client-web
+      app: kss-mcp-template
   template:
     metadata:
       labels:
-        app: kss-client-web
+        app: kss-mcp-template
         version: v1.0.0
     spec:
       imagePullSecrets:
       - name: docker-secret
       containers:
-      - name: kss-client-web
+      - name: kss-mcp-template
         # Use versioned tag instead of latest for better stability
-        image: docker-hosted.sebaoffice.ir/kss-client-web:1.0.0
+        image: docker-hosted.sebaoffice.ir/kss-mcp-template:latest
         imagePullPolicy: Always
         ports:
-        - containerPort: 3000
+        - containerPort: 5000
           name: http
           protocol: TCP
         env:
-        - name: NODE_ENV
-          value: "production"
-        - name: PORT
-          value: "3000"
-        - name: HOSTNAME
-          value: "0.0.0.0"
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: ASPNETCORE_URLS
+          value: "http://+:5000"
         - name: TZ
           value: "UTC"
-        # Database Configuration
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef:
-              name: kss-client-web-secrets
-              key: database-url
-        - name: DIRECT_URL
-          valueFrom:
-            secretKeyRef:
-              name: kss-client-web-secrets
-              key: direct-url
-        # NextAuth Configuration
-        - name: NEXTAUTH_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: kss-client-web-secrets
-              key: nextauth-secret
-        - name: NEXTAUTH_URL
-          value: "https://members.sebaoffice.ir"
-        # Application Configuration
-        - name: NEXT_PUBLIC_APP_NAME
-          value: "KSS Client Web"
-        - name: NEXT_PUBLIC_API_URL
-          valueFrom:
-            configMapKeyRef:
-              name: kss-client-web-config
-              key: api-url
-        # Email Configuration (if using nodemailer)
-        - name: SMTP_HOST
-          valueFrom:
-            secretKeyRef:
-              name: kss-client-web-secrets
-              key: smtp-host
-              optional: true
-        - name: SMTP_PORT
-          valueFrom:
-            secretKeyRef:
-              name: kss-client-web-secrets
-              key: smtp-port
-              optional: true
-        - name: SMTP_USER
-          valueFrom:
-            secretKeyRef:
-              name: kss-client-web-secrets
-              key: smtp-user
-              optional: true
-        - name: SMTP_PASS
-          valueFrom:
-            secretKeyRef:
-              name: kss-client-web-secrets
-              key: smtp-pass
-              optional: true
-        # AWS S3 Configuration (if using S3)
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: kss-client-web-secrets
-              key: aws-access-key-id
-              optional: true
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: kss-client-web-secrets
-              key: aws-secret-access-key
-              optional: true
-        - name: AWS_REGION
-          valueFrom:
-            configMapKeyRef:
-              name: kss-client-web-config
-              key: aws-region
-              optional: true
-        - name: AWS_S3_BUCKET
-          valueFrom:
-            configMapKeyRef:
-              name: kss-client-web-config
-              key: aws-s3-bucket
-              optional: true
+        # Logging Configuration
+        - name: Logging__LogLevel__Default
+          value: "Information"
+        - name: Logging__LogLevel__Microsoft.AspNetCore
+          value: "Warning"
+        # Add any additional environment variables for external API keys if needed
+        # - name: WEATHER_API_KEY
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: kss-mcp-template-secrets
+        #       key: weather-api-key
+        #       optional: true
+        # - name: COINGECKO_API_KEY
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: kss-mcp-template-secrets
+        #       key: coingecko-api-key
+        #       optional: true
         resources:
           requests:
-            memory: "512Mi"
+            memory: "256Mi"
             cpu: "250m"
           limits:
-            memory: "1Gi"
-            cpu: "1000m"
+            memory: "512Mi"
+            cpu: "500m"
         livenessProbe:
           httpGet:
-            path: /api/health
-            port: 3000
-            scheme: HTTP
-          initialDelaySeconds: 60
-          periodSeconds: 30
-          timeoutSeconds: 15
-          failureThreshold: 5
-        readinessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
+            path: /sse
+            port: 5000
             scheme: HTTP
           initialDelaySeconds: 30
-          periodSeconds: 15
-          timeoutSeconds: 10
-          failureThreshold: 5
-        volumeMounts:
-        - name: uploads-volume
-          mountPath: /app/uploads
-        - name: logs-volume
-          mountPath: /app/logs
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /sse
+            port: 5000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
         securityContext:
           allowPrivilegeEscalation: false
           runAsNonRoot: true
-          runAsUser: 1001
-          runAsGroup: 1001
+          runAsUser: 1000
+          runAsGroup: 1000
           capabilities:
             drop:
             - ALL
-      volumes:
-      - name: uploads-volume
-        persistentVolumeClaim:
-          claimName: kss-client-web-uploads-pvc
-      - name: logs-volume
-        persistentVolumeClaim:
-          claimName: kss-client-web-logs-pvc
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: kss-client-web-service
-  namespace: kss-client-web
+  name: kss-mcp-template-service
+  namespace: kss-mcp
   labels:
-    app: kss-client-web
+    app: kss-mcp-template
 spec:
   selector:
-    app: kss-client-web
+    app: kss-mcp-template
   ports:
   - name: http
     port: 80
-    targetPort: 3000
+    targetPort: 5000
     protocol: TCP
   type: ClusterIP
   sessionAffinity: None
 ---
 apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: kss-client-web-uploads-pvc
-  namespace: kss-client-web
-spec:
-  storageClassName: ceph-filesystem
-  accessModes: [ "ReadWriteMany" ]
-  resources:
-    requests:
-      storage: 5Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: kss-client-web-logs-pvc
-  namespace: kss-client-web
-spec:
-  storageClassName: ceph-filesystem
-  accessModes: [ "ReadWriteMany" ]
-  resources:
-    requests:
-      storage: 2Gi
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: kss-client-web-config
-  namespace: kss-client-web
-data:
-  api-url: "https://members.sebaoffice.ir/api"
-  aws-region: "us-east-1"
-  aws-s3-bucket: "kss-client-web-uploads"
----
-apiVersion: v1
 kind: Secret
 metadata:
-  name: kss-client-web-secrets
-  namespace: kss-client-web
+  name: kss-mcp-template-secrets
+  namespace: kss-mcp
 type: Opaque
 data:
-  # Use lowercase database names to avoid case sensitivity issues
-  database-url: cG9zdGdyZXNxbDovL3Bvc3RncmVzOmhxLXZmd2dqZWtRZ1FQRkIzODFwOVZFaDJHNDQyYkBkYXRhYmFzZS5zZWJhb2ZmaWNlLmlyOjU0MzIva3NzLWNsaWVudC13ZWI/cGdib3VuY2VyPXRydWU=
-  direct-url: cG9zdGdyZXNxbDovL3Bvc3RncmVzOmhxLXZmd2dqZWtRZ1FQRkIzODFwOVZFaDJHNDQyYkBkYXRhYmFzZS5zZWJhb2ZmaWNlLmlyOjU0MzIva3NzLWNsaWVudC13ZWI=
-  nextauth-secret: TjNHMnhUNDRvdlpXcDI0SFVRRTU0SlJKcTYzWk9oaE9IZTF1UW5zUXhzND0=
-  # Add other secrets as needed
-  smtp-host: ""
-  smtp-port: ""
-  smtp-user: ""
-  smtp-pass: ""
-  aws-access-key-id: ""
-  aws-secret-access-key: ""
+  # Add base64 encoded API keys here if needed
+  # Example: echo -n "your-api-key" | base64
+  # weather-api-key: ""
+  # coingecko-api-key: ""
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: kss-client-web-ingress
-  namespace: kss-client-web
+  name: kss-mcp-template-ingress
+  namespace: kss-mcp
   annotations:
     haproxy.org/ssl-redirect: "true"
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
     # Let cert-manager handle ACME challenges automatically
     acme.cert-manager.io/http01-edit-in-place: "true"
-    haproxy.org/proxy-body-size: "50m"
-    haproxy.org/proxy-read-timeout: "300"
-    haproxy.org/proxy-send-timeout: "300"
-    haproxy.org/rate-limit: "100"
+    haproxy.org/proxy-body-size: "10m"
+    haproxy.org/proxy-read-timeout: "60"
+    haproxy.org/proxy-send-timeout: "60"
+    haproxy.org/rate-limit: "200"
     haproxy.org/rate-limit-window: "1m"
-    haproxy.org/proxy-buffer-size: "16k"
-    haproxy.org/proxy-buffers-number: "8"
+    haproxy.org/proxy-buffer-size: "8k"
+    haproxy.org/proxy-buffers-number: "4"
 spec:
   ingressClassName: haproxy
   tls:
   - hosts:
-    - members.sebaoffice.ir
-    secretName: kss-client-web-tls
+    - mcp.sebaoffice.ir
+    secretName: kss-mcp-template-tls
   rules:
-  - host: members.sebaoffice.ir
+  - host: mcp.sebaoffice.ir
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: kss-client-web-service
+            name: kss-mcp-template-service
             port:
               number: 80
----
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: kss-client-web-hpa
-  namespace: kss-client-web
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: kss-client-web
-  minReplicas: 2
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
-  behavior:
-    scaleDown:
-      stabilizationWindowSeconds: 300
-      policies:
-      - type: Percent
-        value: 10
-        periodSeconds: 60
-    scaleUp:
-      stabilizationWindowSeconds: 60
-      policies:
-      - type: Percent
-        value: 50
-        periodSeconds: 60
-      - type: Pods
-        value: 2
-        periodSeconds: 60
-      selectPolicy: Max
----
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: kss-client-web-pdb
-  namespace: kss-client-web
-spec:
-  minAvailable: 2
-  selector:
-    matchLabels:
-      app: kss-client-web
----
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: kss-client-web-network-policy
-  namespace: kss-client-web
-spec:
-  podSelector:
-    matchLabels:
-      app: kss-client-web
-  policyTypes: [Ingress, Egress]
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
-          name: kss-client-web
-    - namespaceSelector:
-        matchLabels:
-          ingress: allow   
-    ports:
-    - protocol: TCP
-      port: 3000
-  egress:
-  - to:
-    - ipBlock:
-        cidr: 0.0.0.0/0
-    ports:
-    - { protocol: TCP, port: 5432 }
-    - { protocol: TCP, port: 80 }
-    - { protocol: TCP, port: 443 }
