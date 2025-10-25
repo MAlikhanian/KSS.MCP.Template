@@ -43,4 +43,3 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 # Run the application
 ENTRYPOINT ["dotnet", "KSS.MCP.Template.dll"]
-
