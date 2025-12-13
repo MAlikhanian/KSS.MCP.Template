@@ -1,4 +1,4 @@
-﻿using ModelContextProtocol.Server;
+using ModelContextProtocol.Server;
 using System.ComponentModel;
 using System.Globalization;
 using System.Text.Json;
@@ -35,35 +35,36 @@ public static class WeatherTools
         }));
     }
 
-    [McpServerTool, Description("Get weather forecast for a location.")]
-    public static async Task<string> GetForecast(
-        HttpClient client,
-        [Description("Latitude of the location")] double latitude,
-        [Description("Longitude of the location")] double longitude)
-    {
-        var pointUrl = string.Create(CultureInfo.InvariantCulture, $"/points/{latitude},{longitude}");
+    //[McpServerTool, Description("Get weather forecast for a location.")]
+    //public static async Task<string> GetForecast(
+    //    HttpClient client,
+    //    [Description("Latitude of the location")] double latitude,
+    //    [Description("Longitude of the location")] double longitude)
+    //{
+    //    var pointUrl = string.Create(CultureInfo.InvariantCulture, $"/points/{latitude},{longitude}");
 
-        using var jsonDocument = await client.ReadJsonDocumentAsync(pointUrl);
-        var forecastUrl = jsonDocument.RootElement
-            .GetProperty("properties")
-            .GetProperty("forecast")
-            .GetString()
-            ?? throw new Exception($"No forecast URL provided by api.weather.gov for {latitude},{longitude}");
+    //    using var jsonDocument = await client.ReadJsonDocumentAsync(pointUrl);
+    //    var forecastUrl = jsonDocument.RootElement
+    //        .GetProperty("properties")
+    //        .GetProperty("forecast")
+    //        .GetString()
+    //        ?? throw new Exception($"No forecast URL provided by api.weather.gov for {latitude},{longitude}");
 
-        using var forecastDocument = await client.ReadJsonDocumentAsync(forecastUrl);
-        var periods = forecastDocument.RootElement
-            .GetProperty("properties")
-            .GetProperty("periods")
-            .EnumerateArray()
-            .Take(5); // Only show next 5 periods
+    //    using var forecastDocument = await client.ReadJsonDocumentAsync(forecastUrl);
+    //    var periods = forecastDocument.RootElement
+    //        .GetProperty("properties")
+    //        .GetProperty("periods")
+    //        .EnumerateArray()
+    //        .Take(5); // Only show next 5 periods
 
-        return string.Join("\n---\n", periods.Select(period => $"""
-            {period.GetProperty("name").GetString()}:
-            Temperature: {period.GetProperty("temperature").GetInt32()}°{period.GetProperty("temperatureUnit").GetString()}
-            Wind: {period.GetProperty("windSpeed").GetString()} {period.GetProperty("windDirection").GetString()}
-            Forecast: {period.GetProperty("detailedForecast").GetString()}
-            """));
-    }
+    //    return string.Join("\n---\n", periods.Select(period => $"""
+    //        {period.GetProperty("name").GetString()}:
+    //        Temperature: {period.GetProperty("temperature").GetInt32()}°{period.GetProperty("temperatureUnit").GetString()}
+    //        Wind: {period.GetProperty("windSpeed").GetString()} {period.GetProperty("windDirection").GetString()}
+    //        Forecast: {period.GetProperty("detailedForecast").GetString()}
+    //        """));
+    //}
+
 
     [McpServerTool, Description("Get the current spot price of a cryptocurrency from CoinGecko.")]
     public static async Task<string> GetCoinPrice(
@@ -96,6 +97,53 @@ public static class WeatherTools
 
         return $"{displayCoin} price: {price} {vs.ToUpperInvariant()}";
     }
+
+
+    [McpServerTool, Description("Get sales amount target for the current month.")]
+    public static async Task<string> GetNetSalesAmountCurrentDay(
+        IHttpClientFactory httpFactory)
+    {
+        var client = httpFactory.CreateClient("alborzdco");
+        var uri = "/api/AlorzAI/Web/Sales/GetSalesAmountTargetCurrentMonth";
+
+        using var doc = await client.ReadJsonDocumentAsync(uri);
+        var root = doc.RootElement;
+
+        // Return the JSON response as a formatted string
+        return JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+
+    [McpServerTool, Description("Get sales for the current month.")]
+    public static async Task<string> GetSalesCurrentMonth(
+        IHttpClientFactory httpFactory)
+    {
+        var client = httpFactory.CreateClient("alborzdco");
+        var uri = "/api/AlorzAI/Web/Sales/GetSalesCurrentMonth";
+
+        using var doc = await client.ReadJsonDocumentAsync(uri);
+        var root = doc.RootElement;
+
+        // Return the JSON response as a formatted string
+        return JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+
+    [McpServerTool, Description("Get sales amount target for the current month.")]
+    public static async Task<string> GetSalesAmountTargetCurrentMonth(
+        IHttpClientFactory httpFactory)
+    {
+        var client = httpFactory.CreateClient("alborzdco");
+        var uri = "/api/AlorzAI/Web/Sales/GetSalesAmountTargetCurrentMonth";
+
+        using var doc = await client.ReadJsonDocumentAsync(uri);
+        var root = doc.RootElement;
+
+        // Return the JSON response as a formatted string
+        return JsonSerializer.Serialize(root, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+
 
     private static readonly Dictionary<string, string> _tickerToId = new(StringComparer.OrdinalIgnoreCase)
     {

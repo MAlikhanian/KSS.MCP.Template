@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,6 +23,13 @@ builder.Services.AddHttpClient("coingecko", client =>
 {
     client.BaseAddress = new Uri("https://api.coingecko.com");
     client.DefaultRequestHeaders.UserAgent.ParseAdd("kss-mcp-coinprice/1.0");
+    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+});
+
+builder.Services.AddHttpClient("alborzdco", client =>
+{
+    client.BaseAddress = new Uri("https://alborzdco.ir");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("kss-mcp-sales/1.0");
     client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 });
 
@@ -161,6 +168,7 @@ catch (Exception ex)
 Console.WriteLine("Registered HttpClients:");
 Console.WriteLine(" - weather");
 Console.WriteLine(" - coingecko");
+Console.WriteLine(" - alborzdco");
 Console.WriteLine("===============================================");
 Console.WriteLine("Press Ctrl+C to stop the server");
 
